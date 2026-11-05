@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>NÖCÄFF Claw Machine — 3D / VR</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23ef6f94'/%3E%3Ctext x='16' y='21' text-anchor='middle' font-size='14'%3E☕%3C/text%3E%3C/svg%3E" />
+<style>
+:root{
+  --pink:#f4b6c8; --pink-d:#e891a8; --pink-b:#ef6f94; --ink:#3a2a32; --metal:#c2c8d0;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:linear-gradient(160deg,#ffe4ec,#efb0c4);font-family:"Segoe UI",system-ui,sans-serif;color:var(--ink);touch-action:none;user-select:none}
+#app{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px}
+header{width:min(960px,100%);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.logo{font-weight:900;font-size:clamp(18px,3.5vw,24px);color:#c44569;text-shadow:0 2px 0 #fff}
+.logo span{color:#1e2a4a}
+.hud{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;font-weight:700}
+.pill{background:#fff;border:2px solid #f0a0b8;border-radius:999px;padding:4px 10px;box-shadow:0 2px 0 #e891a8}
+.pill b{color:#c44569}
+#stage{position:relative;width:min(960px,100%);height:min(78vh,820px);background:#f4b6c8;border-radius:18px;box-shadow:0 18px 40px rgba(180,60,100,.28),inset 0 0 0 4px #e891a8;overflow:hidden}
+#c3d,#c2d{position:absolute;inset:0;width:100%;height:100%;display:block}
+#c2d{display:none}
+#panelHUD{position:absolute;left:0;right:0;bottom:0;height:210px;background:linear-gradient(180deg,rgba(174,182,192,.92),rgba(150,160,172,.96));border-top:3px solid #9aa3ad;display:grid;grid-template-columns:1fr 1.4fr;gap:8px;padding:10px 14px 8px;z-index:3}
+.prizeShelf{font-size:12px;font-weight:700;color:#3a2a32;line-height:1.35}
+.prizeShelf small{display:block;opacity:.75;font-weight:600}
+.statusLine{margin-top:6px;font-size:11px;color:#5a3a48}
+.controlsRow{display:flex;align-items:center;justify-content:space-around;gap:10px}
+.joyWrap{display:flex;flex-direction:column;align-items:center;gap:4px}
+.joyBase{width:96px;height:96px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#dfe3e8,#8a929c);box-shadow:inset 0 4px 10px rgba(0,0,0,.25);position:relative;touch-action:none}
+.joyStick{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffc1d4,#ef6f94);border:2px solid #c44569;box-shadow:0 4px 0 #c44569;transition:transform .05s linear}
+.joyLabel{font-size:10px;font-weight:800;letter-spacing:.04em}
+.btnGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pbtn{width:64px;height:64px;border-radius:50%;border:3px solid #c44569;background:radial-gradient(circle at 35% 30%,#ffb3c9,#ef6f94);color:#fff;font-weight:800;font-size:10px;line-height:1.1;cursor:pointer;box-shadow:0 5px 0 #c44569;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:transform .08s,box-shadow .08s}
+.pbtn .k{font-size:9px;opacity:.9;background:rgba(255,255,255,.25);border-radius:999px;padding:0 5px}
+.pbtn:active,.pbtn.pressed{transform:translateY(4px);box-shadow:0 1px 0 #c44569;filter:brightness(1.08)}
+#xrBar{position:absolute;top:10px;right:10px;z-index:4;display:flex;gap:6px;flex-wrap:wrap}
+#xrBar button{display:none;border:none;border-radius:999px;padding:8px 12px;font-weight:800;font-size:12px;cursor:pointer;background:#fff;color:#c44569;box-shadow:0 3px 0 #e891a8}
+#xrBar button.show{display:inline-block}
+#modeTag{position:absolute;top:10px;left:10px;z-index:4;background:rgba(30,20,30,.75);color:#fff;font-size:11px;font-weight:700;padding:6px 10px;border-radius:999px}
+#toast{position:absolute;left:50%;top:14%;transform:translateX(-50%);background:rgba(30,20,30,.85);color:#fff;padding:8px 14px;border-radius:999px;font-weight:700;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:6;white-space:nowrap}
+#toast.show{opacity:1}
+#overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(40,20,30,.55);backdrop-filter:blur(2px);z-index:5;padding:16px}
+#overlay.hidden{display:none}
+.card{background:linear-gradient(180deg,#fff7fa,#ffe0ea);border:3px solid #e891a8;border-radius:20px;padding:22px 20px;width:min(400px,100%);text-align:center;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+.card h1,.card h2{color:#c44569;margin-bottom:8px}
+.card p{font-size:14px;line-height:1.45;margin-bottom:10px}
+.flav{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0 14px;font-size:12px}
+.flav div{background:#fff;border-radius:10px;padding:6px;border:1px solid #f0a0b8}
+.btn{appearance:none;border:none;cursor:pointer;background:linear-gradient(180deg,#ff9bb8,#ef6f94);color:#fff;font-weight:800;font-size:15px;padding:12px 20px;border-radius:999px;box-shadow:0 4px 0 #c44569;margin:4px}
+.btn.secondary{background:linear-gradient(180deg,#fff,#ffe8f0);color:#c44569;box-shadow:0 4px 0 #e891a8}
+#help{width:min(960px,100%);font-size:11px;line-height:1.4;background:rgba(255,255,255,.78);border:1px solid #f0a0b8;border-radius:12px;padding:6px 10px;color:#5a3a48}
+kbd{display:inline-block;background:#fff;border:1px solid #e891a8;border-radius:4px;padding:0 4px;font-weight:700;font-size:10px}
+@media (max-width:720px){
+  #panelHUD{height:230px;grid-template-columns:1fr}
+  .controlsRow{justify-content:center}
+  .pbtn{width:56px;height:56px;font-size:9px}
+  #stage{height:min(82vh,900px)}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">NÖCÄFF <span>Claw 3D</span></div>
+    <div class="hud">
+      <div class="pill">Credits <b id="hudCredits">0</b></div>
+      <div class="pill">Score <b id="hudScore">0</b></div>
+      <div class="pill">Time <b id="hudTime">30</b></div>
+      <div class="pill">Best <b id="hudBest">0</b></div>
+      <div class="pill">View <b id="hudView">3D</b></div>
+    </div>
+  </header>
+  <div id="stage">
+    <canvas id="c3d"></canvas>
+    <canvas id="c2d" width="960" height="820"></canvas>
+    <div id="modeTag">3D Orbit</div>
+    <div id="xrBar">
+      <button id="btnVR" type="button">Enter VR</button>
+      <button id="btnAR" type="button">Enter AR</button>
+    </div>
+    <div id="toast"></div>
+    <div id="panelHUD">
+      <div>
+        <div class="prizeShelf">PRIZES: <span id="prizeList">—</span>
+          <small>Collect all four NÖCÄFF flavours</small>
+        </div>
+        <div class="statusLine" id="statusLine">Insert coin to play</div>
+      </div>
+      <div class="controlsRow">
+        <div class="joyWrap">
+          <div class="joyBase" id="joyBase"><div class="joyStick" id="joyStick"></div></div>
+          <div class="joyLabel">JOYSTICK · WASD / ⌨ 8462</div>
+        </div>
+        <div class="btnGrid" id="btnGrid">
+          <button class="pbtn" data-id="drop" type="button">DROP<span class="k">1</span></button>
+          <button class="pbtn" data-id="coin" type="button">COIN<span class="k">2</span></button>
+          <button class="pbtn" data-id="orbit" type="button">ORBIT<span class="k">3</span></button>
+          <button class="pbtn" data-id="pause" type="button">PAUSE<span class="k">4</span></button>
+          <button class="pbtn" data-id="mute" type="button">MUTE<span class="k">5</span></button>
+          <button class="pbtn" data-id="vrlook" type="button">VR LOOK<span class="k">6</span></button>
+        </div>
+      </div>
+    </div>
+    <div id="overlay">
+      <div class="card" id="startCard">
+        <h1>NÖCÄFF Claw Machine</h1>
+        <p>3D pastel claw catcher with AR/VR-style camera. Use the pink joystick and all 6 buttons — or keys <kbd>1</kbd>–<kbd>6</kbd>.</p>
+        <div class="flav">
+          <div>💗 Gentle Bold</div><div>🌙 Evening Blend</div>
+          <div>😺 Quite Brew</div><div>✨ Soft Cream</div>
+        </div>
+        <button class="btn" id="btnStart">Insert Coin &amp; Play</button>
+        <button class="btn secondary" id="btnHow">Controls</button>
+      </div>
+      <div class="card" id="howCard" style="display:none">
+        <h2>Controls Map</h2>
+        <p style="text-align:left;font-size:13px">
+          <b>1</b> Drop · <b>2</b> Coin · <b>3</b> Orbit camera · <b>4</b> Pause · <b>5</b> Mute · <b>6</b> VR Look<br/>
+          Joystick / <kbd>WASD</kbd> / Arrows / Numpad <kbd>8 4 6 2</kbd> move · Numpad <kbd>5</kbd> drop<br/>
+          Drag stage to orbit · VR Look = mouse-look · Gamepad stick + A/B/X/Y<br/>
+          WebXR: Enter VR / Enter AR when your device supports it
+        </p>
+        <button class="btn" id="btnHowBack">Back</button>
+      </div>
+      <div class="card" id="pauseCard" style="display:none">
+        <h2>Paused</h2>
+        <p>Press <kbd>4</kbd> or Resume.</p>
+        <button class="btn" id="btnResume">Resume</button>
+        <button class="btn secondary" id="btnQuit">Title</button>
+      </div>
+      <div class="card" id="overCard" style="display:none">
+        <h2>Game Over</h2>
+        <p id="overText">Nice try!</p>
+        <button class="btn" id="btnReplay">Play Again</button>
+        <button class="btn secondary" id="btnTitle">Title</button>
+      </div>
+    </div>
+  </div>
+  <div id="help">
+    <kbd>1</kbd> Drop · <kbd>2</kbd> Coin · <kbd>3</kbd> Orbit · <kbd>4</kbd> Pause · <kbd>5</kbd> Mute · <kbd>6</kbd> VR Look ·
+    Joystick / <kbd>WASD</kbd> / Numpad <kbd>8462</kbd> · <kbd>5</kbd> drop · Gamepad supported · Drag to orbit
+  </div>
+</div>
+<script>
+window.__CLAW_BOOT__ = {};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js" integrity="" crossorigin="anonymous"></script>
+<script>
+(() => {
+"use strict";
+
+const HAS_THREE = typeof THREE !== "undefined";
+
+function canWebGL(){
+  try{
+    const c=document.createElement("canvas");
+    return !!(c.getContext("webgl2")||c.getContext("webgl")||c.getContext("experimental-webgl"));
+  }catch(e){ return false; }
+}
+const USE_3D = HAS_THREE && canWebGL();
+
+const HS_KEY = "nocaff_claw3d_best_v1";
+let best = Number(localStorage.getItem(HS_KEY) || 0);
+
+const FLAVOURS = [
+  { id:"gentle", name:"Gentle Bold", body:0xf7c2d4, label:0xfff5f8, accent:0xe85a8a },
+  { id:"evening", name:"Evening Blend", body:0x1e2a4a, label:0x243358, accent:0xf5d76e },
+  { id:"quite", name:"Quite Brew", body:0x2f5d3a, label:0x356843, accent:0xf0a05a },
+  { id:"cream", name:"Soft Cream", body:0xf6d9c8, label:0xfff8f2, accent:0xe891a8 },
+];
+
+const state = {
+  mode: "title",
+  engine: USE_3D ? "3d" : "2d",
+  credits: 0, score: 0, timeLeft: 30,
+  prizes: [],
+  muted: false,
+  keys: Object.create(null),
+  joy: { x:0, y:0, dragging:false },
+  camMode: "orbit", // orbit | vrlook
+  orbitYaw: 0.55, orbitPitch: 0.38, orbitDist: 6.5,
+  lookYaw: 0, lookPitch: 0.15,
+  draggingOrbit: false, lastPtr: null,
+  claw: { x:0, z:0, rope:0.4, open:1, grabbed:null, grip:1, sway:0, swayV:0 },
+  cans: [],
+  turnActive: false, dropUsed: false,
+  btnFlash: {},
+  status: "Insert coin to play",
+  _resumeMode: "playing",
+};
+
+// DOM
+const overlay = document.getElementById("overlay");
+const startCard = document.getElementById("startCard");
+const howCard = document.getElementById("howCard");
+const pauseCard = document.getElementById("pauseCard");
+const overCard = document.getElementById("overCard");
+const toastEl = document.getElementById("toast");
+const hudCredits = document.getElementById("hudCredits");
+const hudScore = document.getElementById("hudScore");
+const hudTime = document.getElementById("hudTime");
+const hudBest = document.getElementById("hudBest");
+const hudView = document.getElementById("hudView");
+const prizeList = document.getElementById("prizeList");
+const statusLine = document.getElementById("statusLine");
+const modeTag = document.getElementById("modeTag");
+const joyBase = document.getElementById("joyBase");
+const joyStick = document.getElementById("joyStick");
+const c3d = document.getElementById("c3d");
+const c2d = document.getElementById("c2d");
+hudBest.textContent = best;
+hudView.textContent = state.engine.toUpperCase();
+if(!USE_3D){ /* stay 2d */ }
+
+function showOverlay(card){
+  overlay.classList.remove("hidden");
+  [startCard,howCard,pauseCard,overCard].forEach(c=>c.style.display="none");
+  card.style.display="block";
+}
+function hideOverlay(){ overlay.classList.add("hidden"); }
+function toast(msg,ms){
+  toastEl.textContent=msg; toastEl.classList.add("show");
+  clearTimeout(toast._t); toast._t=setTimeout(()=>toastEl.classList.remove("show"), ms||1400);
+}
+function updateHUD(){
+  hudCredits.textContent=state.credits;
+  hudScore.textContent=state.score;
+  hudTime.textContent=Math.ceil(Math.max(0,state.timeLeft));
+  hudBest.textContent=best;
+  prizeList.textContent = state.prizes.length ? state.prizes.map(id=>{
+    const f=FLAVOURS.find(x=>x.id===id); return f?f.name.split(" ")[0]:id;
+  }).join(", ") : "—";
+  statusLine.textContent=state.status;
+  modeTag.textContent = state.engine==="3d"
+    ? (state.camMode==="vrlook" ? "VR Look (mouse)" : "3D Orbit")
+    : "2D Fallback";
+  const muteBtn=document.querySelector('.pbtn[data-id="mute"]');
+  if(muteBtn) muteBtn.innerHTML = (state.muted?"UNMUTE":"MUTE") + '<span class="k">5</span>';
+}
+
+// Audio
+let audioCtx=null;
+function ensureAudio(){
+  if(!audioCtx){ const AC=window.AudioContext||window.webkitAudioContext; if(AC) audioCtx=new AC(); }
+  if(audioCtx && audioCtx.state==="suspended") audioCtx.resume();
+}
+function beep(freq,dur,type,vol,delay){
+  if(state.muted) return; ensureAudio(); if(!audioCtx) return;
+  const t0=audioCtx.currentTime+(delay||0);
+  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+  o.type=type||"sine"; o.frequency.setValueAtTime(freq,t0);
+  g.gain.setValueAtTime(0.0001,t0);
+  g.gain.exponentialRampToValueAtTime(vol||0.08,t0+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  o.connect(g); g.connect(audioCtx.destination); o.start(t0); o.stop(t0+dur+0.02);
+}
+const SFX={
+  coin:()=>{beep(880,.08,"square",.06);beep(1175,.12,"square",.05,.08);},
+  move:()=>beep(180+Math.random()*40,.04,"triangle",.02),
+  drop:()=>beep(140,.15,"sawtooth",.05),
+  grab:()=>{beep(320,.1,"square",.05);beep(240,.12,"triangle",.04,.08);},
+  slip:()=>{beep(120,.2,"sawtooth",.06);beep(90,.25,"triangle",.04,.1);},
+  win:()=>{beep(523,.1,"sine",.07);beep(659,.1,"sine",.07,.1);beep(784,.18,"sine",.08,.2);},
+  lose:()=>{beep(220,.2,"triangle",.06);beep(165,.3,"triangle",.05,.15);},
+  click:()=>beep(600,.04,"square",.03),
+  tick:()=>beep(900,.03,"sine",.02),
+};
+
+function rnd(a,b){return a+Math.random()*(b-a);}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+function flashBtn(id){
+  state.btnFlash[id]=0.2;
+  const el=document.querySelector(`.pbtn[data-id="${id}"]`);
+  if(el){ el.classList.add("pressed"); setTimeout(()=>el.classList.remove("pressed"),160); }
+}
+
+function pressButton(id){
+  flashBtn(id); SFX.click();
+  switch(id){
+    case "drop": tryDrop(); break;
+    case "coin": insertCoin(); break;
+    case "orbit":
+      state.camMode="orbit";
+      state.orbitYaw += 0.45;
+      toast("Orbit camera");
+      updateHUD();
+      break;
+    case "pause": togglePause(); break;
+    case "mute":
+      state.muted=!state.muted;
+      toast(state.muted?"Muted":"Sound on");
+      updateHUD();
+      break;
+    case "vrlook":
+      if(state.engine!=="3d"){ toast("VR Look needs 3D"); break; }
+      state.camMode = state.camMode==="vrlook" ? "orbit" : "vrlook";
+      toast(state.camMode==="vrlook" ? "VR Look on — move mouse" : "Orbit camera");
+      updateHUD();
+      break;
+  }
+}
+
+function insertCoin(){
+  ensureAudio();
+  if(state.mode==="title"||state.mode==="over"){ startGame(false); }
+  state.credits += 1; SFX.coin(); updateHUD(); toast("+1 credit");
+  if(state.mode==="playing" && !state.turnActive) beginTurn();
+}
+function beginTurn(){
+  if(state.credits<=0){ toast("Need a coin!"); return false; }
+  if(state.turnActive||state.dropUsed) return false;
+  if(state.mode!=="playing") return false;
+  state.credits--; state.turnActive=true; state.dropUsed=false; state.timeLeft=30;
+  resetClaw(); SFX.coin(); state.status="Aim with stick / keys"; updateHUD(); toast("Go!");
+  return true;
+}
+function endTurn(){
+  state.turnActive=false; state.dropUsed=false; state.claw.grabbed=null; state.claw.open=1; state.claw.rope=0.4;
+  state.status = state.credits>0 ? "Press DROP or COIN turn" : "Insert COIN";
+  updateHUD();
+  if(state.credits<=0){
+    setTimeout(()=>{ if(state.credits<=0 && !state.turnActive && state.mode==="playing") gameOver(); }, 1100);
+  }
+}
+function gameOver(){
+  state.mode="over";
+  if(state.score>best){ best=state.score; localStorage.setItem(HS_KEY,String(best)); }
+  const names=state.prizes.map(id=>FLAVOURS.find(f=>f.id===id)?.name||id);
+  document.getElementById("overText").innerHTML=`Score <b>${state.score}</b><br/>Won: ${names.length?names.join(", "):"none"}`;
+  showOverlay(overCard); SFX.lose(); updateHUD();
+}
+function togglePause(){
+  if(["playing","dropping","grabbing","lifting","carrying","releasing"].includes(state.mode)){
+    state._resumeMode=state.mode; state.mode="paused"; showOverlay(pauseCard);
+  } else if(state.mode==="paused"){
+    state.mode=state._resumeMode||"playing"; hideOverlay();
+  }
+}
+function tryDrop(){
+  if(state.mode!=="playing") return;
+  if(!state.turnActive){ if(!beginTurn()) return; }
+  if(state.dropUsed) return;
+  state.dropUsed=true; state.mode="dropping"; state.claw.open=1; state.status="Dropping…"; SFX.drop(); updateHUD();
+}
+function resetClaw(){
+  const c=state.claw; c.x=0; c.z=0; c.rope=0.4; c.open=1; c.grabbed=null; c.grip=1; c.sway=0; c.swayV=0;
+}
+function makeCan(flavour,x,y,z){
+  return { flavour, x,y,z, vx:0,vy:0,vz:0, rot:rnd(-.2,.2), grabbed:false, won:false, mesh:null };
+}
+function pileCans(n){
+  // clear old meshes
+  if(world && world.canGroup){
+    while(world.canGroup.children.length) world.canGroup.remove(world.canGroup.children[0]);
+  }
+  state.cans=[];
+  let i=0;
+  for(let r=0;r<4;r++){
+    for(let c=0;c<6;c++){
+      if(i>=n) break;
+      const f=FLAVOURS[(c+r*2)%FLAVOURS.length];
+      const x=-1.5+c*0.55+rnd(-.05,.05)+(r%2)*0.12;
+      const z=-0.9+r*0.45+rnd(-.05,.05);
+      const y=-1.15 + r*0.02;
+      const can=makeCan(f,x,y,z);
+      state.cans.push(can); if(world) addCanMesh(can); i++;
+    }
+  }
+  while(state.cans.length<n){
+    const f=FLAVOURS[Math.floor(Math.random()*4)];
+    const can=makeCan(f,rnd(-1.6,1.6),-1.15,rnd(-1.0,0.9));
+    state.cans.push(can); if(world) addCanMesh(can);
+  }
+}
+function startGame(){
+  ensureAudio();
+  state.score=0; state.prizes=[]; state.timeLeft=30; state.credits=Math.max(state.credits,3);
+  if(state.credits<1) state.credits=3;
+  pileCans(22); resetClaw(); state.turnActive=false; state.dropUsed=false;
+  state.mode="playing"; state.camMode="orbit"; state.status="Press DROP or insert COIN"; hideOverlay(); updateHUD(); toast("Ready!");
+}
+
+// ---------- Three.js world ----------
+let world=null;
+function addCanMesh(can){
+  if(!HAS_THREE || !world) return;
+  const f=can.flavour;
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18,0.18,0.52,20),
+    new THREE.MeshStandardMaterial({ color:f.body, metalness:0.25, roughness:0.45 })
+  );
+  const top=new THREE.Mesh(
+    new THREE.CylinderGeometry(0.17,0.17,0.04,20),
+    new THREE.MeshStandardMaterial({ color:0xcccccc, metalness:0.7, roughness:0.3 })
+  );
+  top.position.y=0.28;
+  const label=new THREE.Mesh(
+    new THREE.CylinderGeometry(0.181,0.181,0.28,20,1,true),
+    new THREE.MeshStandardMaterial({ color:f.label, metalness:0.1, roughness:0.6, side:THREE.DoubleSide })
+  );
+  // tiny mascot blob
+  const mascot=new THREE.Mesh(
+    new THREE.SphereGeometry(0.07,12,12),
+    new THREE.MeshStandardMaterial({ color:f.accent })
+  );
+  mascot.position.set(0.12,0.05,0.14);
+  g.add(body,top,label,mascot);
+  g.position.set(can.x, can.y+0.26, can.z);
+  g.rotation.y=can.rot;
+  can.mesh=g; world.canGroup.add(g);
+}
+
+function buildWorld(){
+  if(!HAS_THREE) return null;
+  const renderer=new THREE.WebGLRenderer({ canvas:c3d, antialias:true, alpha:true, failIfMajorPerformanceCaveat:false, powerPreference:"default" });
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(c3d.clientWidth || 800, c3d.clientHeight || 600, false);
+  if(renderer.outputColorSpace !== undefined) renderer.outputColorSpace = THREE.SRGBColorSpace;
+  else if(renderer.outputEncoding !== undefined) renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.xr.enabled=true;
+  const scene=new THREE.Scene();
+  scene.background=new THREE.Color(0xf4b6c8);
+  const camera=new THREE.PerspectiveCamera(50, c3d.clientWidth/Math.max(1,c3d.clientHeight), 0.1, 100);
+  camera.position.set(0,2.2,7);
+
+  const hemi=new THREE.HemisphereLight(0xffe8f0, 0x887788, 1.1);
+  scene.add(hemi);
+  const dir=new THREE.DirectionalLight(0xffffff, 1.0);
+  dir.position.set(3,6,4); scene.add(dir);
+
+  const cabinet=new THREE.Group();
+  // floor
+  const floor=new THREE.Mesh(new THREE.BoxGeometry(4.2,0.12,3.2), new THREE.MeshStandardMaterial({color:0xf2c2d2}));
+  floor.position.y=-1.35; cabinet.add(floor);
+  // back
+  const back=new THREE.Mesh(new THREE.BoxGeometry(4.2,3.2,0.12), new THREE.MeshStandardMaterial({color:0xfde8ef}));
+  back.position.set(0,0.2,-1.55); cabinet.add(back);
+  // sides
+  const sideMat=new THREE.MeshStandardMaterial({color:0xe891a8, metalness:0.1, roughness:0.7});
+  const left=new THREE.Mesh(new THREE.BoxGeometry(0.12,3.2,3.2), sideMat); left.position.set(-2.1,0.2,0); cabinet.add(left);
+  const right=new THREE.Mesh(new THREE.BoxGeometry(0.12,3.2,3.2), sideMat); right.position.set(2.1,0.2,0); cabinet.add(right);
+  // silver frame edges
+  const frameMat=new THREE.MeshStandardMaterial({color:0xb8bec8, metalness:0.8, roughness:0.25});
+  [[-2.05,1.75,0],[2.05,1.75,0]].forEach(([x,y,z])=>{
+    const bar=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.08,3.2), frameMat); bar.position.set(x,y,z); cabinet.add(bar);
+  });
+  // glass front (transparent)
+  const glass=new THREE.Mesh(
+    new THREE.PlaneGeometry(4.0,3.0),
+    new THREE.MeshPhysicalMaterial({ color:0xffffff, transparent:true, opacity:0.12, roughness:0.1, transmission:0.6, thickness:0.2 })
+  );
+  glass.position.set(0,0.25,1.55); cabinet.add(glass);
+  // prize chute
+  const chute=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.7,0.5), new THREE.MeshStandardMaterial({color:0x2a2030}));
+  chute.position.set(1.55,-0.95,1.2); cabinet.add(chute);
+  // top rail
+  const rail=new THREE.Mesh(new THREE.BoxGeometry(3.8,0.08,0.08), frameMat); rail.position.set(0,1.55,0); cabinet.add(rail);
+  scene.add(cabinet);
+
+  // claw assembly
+  const clawRoot=new THREE.Group();
+  const carriage=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.22,0.4), new THREE.MeshStandardMaterial({color:0x8e97a2, metalness:0.6, roughness:0.3}));
+  clawRoot.add(carriage);
+  const rope=new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.015,1,8), new THREE.MeshStandardMaterial({color:0x333333}));
+  rope.geometry.translate(0,-0.5,0); clawRoot.add(rope);
+  const hub=new THREE.Mesh(new THREE.SphereGeometry(0.09,16,16), new THREE.MeshStandardMaterial({color:0xc0c6ce, metalness:0.7, roughness:0.25}));
+  hub.position.y=-0.4; clawRoot.add(hub);
+  const prongs=[];
+  for(let i=0;i<3;i++){
+    const p=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.02,0.32,8), new THREE.MeshStandardMaterial({color:0xb8c0c9, metalness:0.75, roughness:0.22}));
+    p.position.set(0,-0.55,0); clawRoot.add(p); prongs.push(p);
+  }
+  clawRoot.position.set(0,1.45,0); scene.add(clawRoot);
+
+  const canGroup=new THREE.Group(); scene.add(canGroup);
+
+  // outer pink shell hint
+  const shell=new THREE.Mesh(
+    new THREE.BoxGeometry(4.8,4.4,3.8),
+    new THREE.MeshStandardMaterial({ color:0xf4b6c8, transparent:true, opacity:0.15, side:THREE.BackSide })
+  );
+  shell.position.y=0.3; scene.add(shell);
+
+  return { renderer, scene, camera, clawRoot, rope, hub, prongs, canGroup, cabinet, chute };
+}
+
+function syncClaw3D(){
+  if(!world) return;
+  const c=state.claw;
+  world.clawRoot.position.x=c.x;
+  world.clawRoot.position.z=c.z;
+  world.clawRoot.position.y=1.45;
+  const ropeLen=0.35+c.rope;
+  world.rope.scale.y=ropeLen/1;
+  world.hub.position.y=-ropeLen;
+  const open=c.open;
+  for(let i=0;i<3;i++){
+    const a=(i/3)*Math.PI*2;
+    const spread=0.05+open*0.16;
+    const p=world.prongs[i];
+    p.position.set(Math.cos(a)*spread, -ropeLen-0.18, Math.sin(a)*spread);
+    p.rotation.z = Math.cos(a)*(0.2+open*0.7);
+    p.rotation.x = Math.sin(a)*(0.2+open*0.7);
+  }
+  world.clawRoot.rotation.z=c.sway*0.15;
+  if(c.grabbed && c.grabbed.mesh){
+    c.grabbed.mesh.position.set(c.x+Math.sin(c.sway)*0.08, 1.45-ropeLen-0.45, c.z);
+    c.grabbed.mesh.rotation.z=c.sway*0.3;
+  }
+}
+
+function updateCamera(dt){
+  if(!world) return;
+  const cam=world.camera;
+  if(rendererXRPresenting()){
+    // WebXR owns camera
+    return;
+  }
+  if(state.camMode==="vrlook"){
+    const target=new THREE.Vector3(state.claw.x, 0.2, state.claw.z);
+    const eyex = target.x + Math.sin(state.lookYaw)*Math.cos(state.lookPitch)*2.2;
+    const eyey = target.y + 1.1 + Math.sin(state.lookPitch)*1.5;
+    const eyez = target.z + Math.cos(state.lookYaw)*Math.cos(state.lookPitch)*2.2;
+    cam.position.lerp(new THREE.Vector3(eyex,eyey,eyez), 1-Math.pow(0.001,dt));
+    cam.lookAt(target.x, target.y+0.3, target.z);
+  } else {
+    const yaw=state.orbitYaw, pitch=state.orbitPitch, dist=state.orbitDist;
+    const x=Math.sin(yaw)*Math.cos(pitch)*dist;
+    const y=Math.sin(pitch)*dist+0.6;
+    const z=Math.cos(yaw)*Math.cos(pitch)*dist;
+    cam.position.lerp(new THREE.Vector3(x,y,z), 1-Math.pow(0.0008,dt));
+    cam.lookAt(0,0.1,0);
+  }
+}
+function rendererXRPresenting(){
+  try{ return world && world.renderer.xr.isPresenting; }catch(e){ return false; }
+}
+
+// Gameplay update shared
+function attemptGrab(){
+  const c=state.claw;
+  let bestCan=null, bestScore=1e9;
+  for(const can of state.cans){
+    if(can.won||can.grabbed) continue;
+    const dx=can.x-c.x, dz=can.z-c.z;
+    const d=Math.hypot(dx,dz);
+    const tipY=1.45-(0.35+c.rope)-0.2;
+    const dy=Math.abs((can.y+0.26)-tipY);
+    if(d<0.35 && dy<0.55){
+      const s=d*2+dy;
+      if(s<bestScore){ bestScore=s; bestCan=can; }
+    }
+  }
+  c.open=0;
+  if(bestCan){
+    const center=1-clamp(bestScore/0.7,0,1);
+    c.grip=clamp(0.35+center*0.55+rnd(-.1,.15),0.2,1);
+    if(c.grip<0.4 && Math.random()<0.35){ SFX.slip(); toast("Weak grip!"); c.grabbed=null; }
+    else {
+      bestCan.grabbed=true; c.grabbed=bestCan; c.sway=rnd(-.2,.2); c.swayV=rnd(-1,1);
+      SFX.grab(); toast(c.grip>0.7?"Solid grab!":"Shaky grab…");
+    }
+  } else toast("Nothing…");
+  state.mode="lifting"; state.status="Lifting…";
+}
+function slipCan(){
+  const c=state.claw; const can=c.grabbed;
+  if(can){ can.grabbed=false; can.vy=1.5; can.vx=rnd(-1,1); can.vz=rnd(-1,1); }
+  c.grabbed=null; c.open=0.6; SFX.slip(); toast("Slipped!"); state.mode="lifting"; state.status="Slipped — retracting";
+}
+function updateCans(dt){
+  for(const can of state.cans){
+    if(can.grabbed||can.won) continue;
+    can.vy -= 9*dt;
+    can.x += can.vx*dt; can.y += can.vy*dt; can.z += can.vz*dt;
+    can.vx*=0.98; can.vz*=0.98;
+    if(can.y<-1.15){ can.y=-1.15; can.vy*=-0.2; if(Math.abs(can.vy)<0.4) can.vy=0; }
+    can.x=clamp(can.x,-1.8,1.8); can.z=clamp(can.z,-1.3,1.2);
+    if(can.mesh){ can.mesh.position.set(can.x, can.y+0.26, can.z); can.mesh.rotation.y=can.rot; }
+  }
+  // soft sep
+  for(let i=0;i<state.cans.length;i++){
+    for(let j=i+1;j<state.cans.length;j++){
+      const a=state.cans[i], b=state.cans[j];
+      if(a.grabbed||b.grabbed||a.won||b.won) continue;
+      const dx=b.x-a.x, dz=b.z-a.z; const d=Math.hypot(dx,dz)||0.001;
+      if(d<0.38){ const push=(0.38-d)*0.5; a.x-=dx/d*push; b.x+=dx/d*push; a.z-=dz/d*push; b.z+=dz/d*push; }
+    }
+  }
+}
+
+function update(dt){
+  for(const k of Object.keys(state.btnFlash)) state.btnFlash[k]=Math.max(0,state.btnFlash[k]-dt);
+  pollGamepad();
+  if(state.mode==="paused"||state.mode==="title"||state.mode==="over") return;
+
+  if(state.turnActive && !state.dropUsed && state.mode==="playing"){
+    const prev=state.timeLeft; state.timeLeft-=dt;
+    if(Math.floor(prev)!==Math.floor(state.timeLeft) && state.timeLeft<=5 && state.timeLeft>0) SFX.tick();
+    if(state.timeLeft<=0){ state.timeLeft=0; toast("Time up!"); tryDrop(); }
+    updateHUD();
+  }
+
+  const c=state.claw;
+  const canMove=state.turnActive && !state.dropUsed && state.mode==="playing";
+  let mx=0,mz=0;
+  if(canMove){
+    if(state.keys["ArrowLeft"]||state.keys["KeyA"]||state.keys["Numpad4"]) mx-=1;
+    if(state.keys["ArrowRight"]||state.keys["KeyD"]||state.keys["Numpad6"]) mx+=1;
+    if(state.keys["ArrowUp"]||state.keys["KeyW"]||state.keys["Numpad8"]) mz-=1;
+    if(state.keys["ArrowDown"]||state.keys["KeyS"]||state.keys["Numpad2"]) mz+=1;
+    mx+=state.joy.x; mz+=state.joy.y;
+    mx+=state.padX||0; mz+=state.padY||0;
+  }
+  if(canMove && (Math.abs(mx)>0.05||Math.abs(mz)>0.05)){
+    c.x=clamp(c.x+mx*2.2*dt,-1.7,1.7);
+    c.z=clamp(c.z+mz*2.0*dt,-1.2,1.1);
+    if(!update._ls || performance.now()-update._ls>90){ SFX.move(); update._ls=performance.now(); }
+  }
+
+  if(state.mode==="dropping"){
+    c.rope+=2.6*dt;
+    const maxR=2.35 - Math.abs(c.z)*0.05;
+    if(c.rope>=maxR){ c.rope=maxR; state.mode="grabbing"; state._grabT=0; state.status="Grabbing…"; }
+  }
+  if(state.mode==="grabbing"){
+    state._grabT=(state._grabT||0)+dt;
+    c.open=Math.max(0,1-state._grabT/0.35);
+    if(state._grabT>=0.4) attemptGrab();
+  }
+  if(state.mode==="lifting"){
+    c.rope-=2.2*dt;
+    c.swayV+=(-c.sway*8-c.swayV*2)*dt; c.sway+=c.swayV*dt;
+    if(c.grabbed){
+      c.grip-=dt*rnd(0.02,0.12);
+      if(c.grip<0.15 && Math.random()<dt*1.2){ slipCan(); return; }
+    }
+    if(c.rope<=0.4){
+      c.rope=0.4;
+      if(c.grabbed){ state.mode="carrying"; state.status="To prize chute…"; }
+      else { state.mode="playing"; endTurn(); toast("Missed!"); }
+    }
+  }
+  if(state.mode==="carrying"){
+    c.swayV+=(-c.sway*10-c.swayV*2.5)*dt+rnd(-1,1)*dt*3; c.sway+=c.swayV*dt;
+    const tx=1.55, tz=1.0;
+    c.x+=clamp(tx-c.x,-1.8*dt,1.8*dt);
+    c.z+=clamp(tz-c.z,-1.8*dt,1.8*dt);
+    if(c.grabbed){
+      c.grip-=dt*rnd(0.01,0.08);
+      if(c.grip<0.2 && Math.random()<dt*0.8){ slipCan(); return; }
+    }
+    if(Math.abs(tx-c.x)<0.08 && Math.abs(tz-c.z)<0.08){ state.mode="releasing"; state._relT=0; }
+  }
+  if(state.mode==="releasing"){
+    state._relT=(state._relT||0)+dt; c.open=Math.min(1,state._relT/0.3);
+    if(c.grabbed){
+      const can=c.grabbed; can.grabbed=false; can.won=true;
+      state.prizes.push(can.flavour.id);
+      state.score+=100+Math.floor((1.2-Math.abs(can.z))*40);
+      if(can.mesh){ world&&world.canGroup.remove(can.mesh); }
+      c.grabbed=null; SFX.win(); toast("Got "+can.flavour.name+"!"); updateHUD();
+    }
+    if(state._relT>0.55){
+      state.cans=state.cans.filter(cn=>!cn.won);
+      state.mode="playing"; endTurn();
+      if(state.cans.length<8){
+        for(let i=0;i<5;i++){ const f=FLAVOURS[Math.floor(Math.random()*4)]; const can=makeCan(f,rnd(-1.5,1.5),-1.15,rnd(-1,0.8)); state.cans.push(can); if(world) addCanMesh(can); }
+      }
+    }
+  }
+  updateCans(dt);
+  if(world){ syncClaw3D(); updateCamera(dt); }
+}
+
+// Gamepad
+state.padX=0; state.padY=0; state._padPrev={};
+function pollGamepad(){
+  const pads=navigator.getGamepads ? navigator.getGamepads() : [];
+  const gp=pads && (pads[0]||pads[1]);
+  if(!gp){ state.padX=0; state.padY=0; return; }
+  state.padX = Math.abs(gp.axes[0])>0.18 ? gp.axes[0] : 0;
+  state.padY = Math.abs(gp.axes[1])>0.18 ? gp.axes[1] : 0;
+  const map={0:"drop",1:"coin",2:"orbit",3:"pause",4:"mute",5:"vrlook",9:"drop"};
+  for(const [idx,id] of Object.entries(map)){
+    const pressed=!!gp.buttons[idx] && gp.buttons[idx].pressed;
+    if(pressed && !state._padPrev[idx]) pressButton(id);
+    state._padPrev[idx]=pressed;
+  }
+}
+
+// Input wiring
+document.querySelectorAll(".pbtn").forEach(btn=>{
+  const fire=e=>{ e.preventDefault(); pressButton(btn.dataset.id); };
+  btn.addEventListener("pointerdown", fire);
+});
+
+function setJoyFromEvent(e, el){
+  const r=el.getBoundingClientRect();
+  const cx=r.left+r.width/2, cy=r.top+r.height/2;
+  const clientX=e.clientX ?? (e.touches&&e.touches[0].clientX);
+  const clientY=e.clientY ?? (e.touches&&e.touches[0].clientY);
+  let dx=clientX-cx, dy=clientY-cy;
+  const max=r.width*0.35; const d=Math.hypot(dx,dy)||1;
+  if(d>max){ dx=dx/d*max; dy=dy/d*max; }
+  state.joy.x=dx/max; state.joy.y=dy/max;
+  joyStick.style.transform=`translate(${dx}px,${dy}px)`;
+}
+joyBase.addEventListener("pointerdown", e=>{
+  e.preventDefault(); ensureAudio();
+  joyBase.setPointerCapture(e.pointerId);
+  state.joy.dragging=true; setJoyFromEvent(e,joyBase);
+  if(state.mode==="playing" && !state.turnActive && state.credits>0) beginTurn();
+});
+joyBase.addEventListener("pointermove", e=>{ if(state.joy.dragging) setJoyFromEvent(e,joyBase); });
+function endJoy(){ state.joy.dragging=false; state.joy.x=0; state.joy.y=0; joyStick.style.transform="translate(0,0)"; }
+joyBase.addEventListener("pointerup", endJoy);
+joyBase.addEventListener("pointercancel", endJoy);
+
+window.addEventListener("keydown", e=>{
+  state.keys[e.code]=true;
+  const block=["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Space","Numpad5"];
+  if(block.includes(e.code)) e.preventDefault();
+  if(e.repeat) return;
+  const numMap={ Digit1:"drop", Numpad1:"drop", Digit2:"coin", Numpad2:"coin", Digit3:"orbit", Numpad3:"orbit",
+    Digit4:"pause", /*num4 is move*/ Digit5:"mute", Digit6:"vrlook", Numpad6:"vrlook" };
+  // Careful: Numpad2/4/6/8 are movement; Digit2 etc are buttons. Numpad5 drops.
+  if(e.code==="Digit1") pressButton("drop");
+  else if(e.code==="Digit2") pressButton("coin");
+  else if(e.code==="Digit3") pressButton("orbit");
+  else if(e.code==="Digit4") pressButton("pause");
+  else if(e.code==="Digit5") pressButton("mute");
+  else if(e.code==="Digit6") pressButton("vrlook");
+  else if(e.code==="Numpad5" || e.code==="Space" || e.code==="Enter"){
+    if(state.mode==="title"){ startGame(); return; }
+    if(state.mode==="over"){ startGame(); return; }
+    if(state.mode==="paused"){ togglePause(); return; }
+    tryDrop();
+  } else if(e.code==="KeyP") togglePause();
+  else if(e.code==="KeyM"){ state.muted=!state.muted; toast(state.muted?"Muted":"Sound on"); updateHUD(); }
+  if(["ArrowLeft","ArrowRight","KeyA","KeyD","ArrowUp","ArrowDown","KeyW","KeyS","Numpad8","Numpad4","Numpad6","Numpad2"].includes(e.code)){
+    if(state.mode==="playing" && !state.turnActive && state.credits>0) beginTurn();
+  }
+});
+window.addEventListener("keyup", e=>{ state.keys[e.code]=false; });
+
+// Orbit / VR look drag on stage (not on panel)
+const stage=document.getElementById("stage");
+stage.addEventListener("pointerdown", e=>{
+  if(e.target.closest("#panelHUD") || e.target.closest("#overlay") || e.target.closest("#xrBar")) return;
+  if(state.mode==="title"||state.mode==="over"||state.mode==="paused") return;
+  state.draggingOrbit=true; state.lastPtr={x:e.clientX,y:e.clientY};
+  try{ stage.setPointerCapture(e.pointerId); }catch(_){}
+});
+stage.addEventListener("pointermove", e=>{
+  if(!state.draggingOrbit || !state.lastPtr) return;
+  const dx=e.clientX-state.lastPtr.x, dy=e.clientY-state.lastPtr.y;
+  state.lastPtr={x:e.clientX,y:e.clientY};
+  if(state.camMode==="vrlook"){
+    state.lookYaw -= dx*0.005; state.lookPitch = clamp(state.lookPitch+dy*0.004, -0.6, 0.8);
+  } else {
+    state.orbitYaw -= dx*0.005; state.orbitPitch = clamp(state.orbitPitch+dy*0.004, 0.15, 1.1);
+  }
+});
+stage.addEventListener("pointerup", ()=>{ state.draggingOrbit=false; state.lastPtr=null; });
+stage.addEventListener("wheel", e=>{
+  if(state.camMode!=="orbit") return;
+  state.orbitDist=clamp(state.orbitDist+e.deltaY*0.01, 4.5, 11);
+}, {passive:true});
+
+document.getElementById("btnStart").onclick=()=>{ startGame(); SFX.coin(); };
+document.getElementById("btnHow").onclick=()=>{ startCard.style.display="none"; howCard.style.display="block"; };
+document.getElementById("btnHowBack").onclick=()=>{ howCard.style.display="none"; startCard.style.display="block"; };
+document.getElementById("btnResume").onclick=()=>togglePause();
+document.getElementById("btnQuit").onclick=()=>{ state.mode="title"; showOverlay(startCard); };
+document.getElementById("btnReplay").onclick=()=>startGame();
+document.getElementById("btnTitle").onclick=()=>{ state.mode="title"; showOverlay(startCard); };
+
+// WebXR
+async function setupXR(){
+  if(!HAS_THREE || !world || !navigator.xr) return;
+  const btnVR=document.getElementById("btnVR");
+  const btnAR=document.getElementById("btnAR");
+  try{
+    if(await navigator.xr.isSessionSupported("immersive-vr")) btnVR.classList.add("show");
+  }catch(_){}
+  try{
+    if(await navigator.xr.isSessionSupported("immersive-ar")) btnAR.classList.add("show");
+  }catch(_){}
+  btnVR.onclick=async()=>{
+    try{
+      const session=await navigator.xr.requestSession("immersive-vr",{ optionalFeatures:["local-floor","bounded-floor"] });
+      await world.renderer.xr.setSession(session);
+      toast("VR session");
+    }catch(err){ toast("VR failed"); console.warn(err); }
+  };
+  btnAR.onclick=async()=>{
+    try{
+      const session=await navigator.xr.requestSession("immersive-ar",{ requiredFeatures:["hit-test"], optionalFeatures:["dom-overlay"], domOverlay:{root:document.getElementById("stage")} });
+      await world.renderer.xr.setSession(session);
+      toast("AR session");
+    }catch(err){ toast("AR failed"); console.warn(err); }
+  };
+}
+
+// 2D fallback (simplified) if no THREE
+const ctx2=c2d.getContext("2d");
+function draw2D(){
+  const W=c2d.width, H=c2d.height;
+  ctx2.clearRect(0,0,W,H);
+  ctx2.fillStyle="#f4b6c8"; ctx2.fillRect(0,0,W,H-210);
+  ctx2.fillStyle="#fde8ef"; ctx2.fillRect(80,40,W-160,H-280);
+  ctx2.strokeStyle="#b8bec8"; ctx2.lineWidth=8; ctx2.strokeRect(80,40,W-160,H-280);
+  // cans
+  for(const can of state.cans){
+    if(can.won) continue;
+    const sx=W/2+can.x*90, sy=H-280 - (can.y+1.15)*80 - can.z*20;
+    ctx2.fillStyle="#"+can.flavour.body.toString(16).padStart(6,"0");
+    ctx2.fillRect(sx-18,sy-28,36,56);
+  }
+  // claw
+  const cx=W/2+state.claw.x*90, cy=70+state.claw.rope*90;
+  ctx2.strokeStyle="#444"; ctx2.lineWidth=2; ctx2.beginPath(); ctx2.moveTo(cx,50); ctx2.lineTo(cx,cy); ctx2.stroke();
+  ctx2.fillStyle="#c0c6ce"; ctx2.beginPath(); ctx2.arc(cx,cy,10,0,7); ctx2.fill();
+}
+
+function resize(){
+  const stageEl=document.getElementById("stage");
+  const w=stageEl.clientWidth, h=stageEl.clientHeight;
+  if(world){
+    world.renderer.setSize(w,h,false);
+    world.camera.aspect=w/Math.max(1,h); world.camera.updateProjectionMatrix();
+  }
+  c2d.width=w; c2d.height=h;
+}
+window.addEventListener("resize", resize);
+
+// boot
+function start2DFallback(reason){
+  console.warn("3D unavailable, using 2D fallback:", reason);
+  world=null;
+  state.engine="2d";
+  hudView.textContent="2D";
+  c3d.style.display="none";
+  c2d.style.display="block";
+  pileCans(18);
+  resize();
+  updateHUD();
+  toast("2D fallback mode");
+}
+
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(0.033,(now-last)/1000); last=now;
+  try { update(dt); } catch(err){ console.warn(err); }
+  if(world){
+    try { world.renderer.render(world.scene, world.camera); } catch(err){ console.warn(err); }
+  } else {
+    draw2D();
+  }
+  requestAnimationFrame(frame);
+}
+
+if(USE_3D){
+  try {
+    c3d.style.display="block"; c2d.style.display="none";
+    world=buildWorld();
+    // probe context
+    const gl = world.renderer.getContext();
+    if(!gl) throw new Error("No WebGL context");
+    pileCans(18);
+    resize();
+    setupXR();
+    world.renderer.setAnimationLoop(()=>{
+      const now=performance.now();
+      const dt=Math.min(0.033,(now-last)/1000); last=now;
+      try { update(dt); } catch(err){ console.warn(err); }
+      world.renderer.render(world.scene, world.camera);
+    });
+  } catch(err){
+    start2DFallback(err && err.message ? err.message : String(err));
+    requestAnimationFrame(frame);
+  }
+} else {
+  start2DFallback(HAS_THREE ? "WebGL unsupported" : "THREE missing");
+  requestAnimationFrame(frame);
+}
+
+updateHUD();
+
+window.__CLAW__ = {
+  BUTTON_IDS:["drop","coin","orbit","pause","mute","vrlook"],
+  state, startGame, insertCoin, tryDrop, beginTurn, pressButton,
+  getMode:()=>state.mode, HAS_THREE: HAS_THREE, USE_3D: !!world,
+  engine:()=>state.engine,
+};
+})();
+</script>
+</body>
+</html>
